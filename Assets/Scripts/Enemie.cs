@@ -5,7 +5,18 @@ using UnityEngine.AI;
 
 public class Enemie : MonoBehaviour
 {
-    public float Hp;
+    [SerializeField]private float _Hp;
+    public float Hp
+    {
+        get => _Hp;
+        set
+        {
+            _Hp = value;
+            if (_Hp > 0) return;
+            Die();
+            Agent.isStopped = true;
+        }
+    }
     public float Damage;
     public float AtackSpeed;
     public float AttackRange = 2;
@@ -15,7 +26,16 @@ public class Enemie : MonoBehaviour
     public NavMeshAgent Agent;
 
     private float lastAttackTime = 0;
-    private bool isDead = false;
+    private bool _isDead = false;
+    private bool isDead
+    {
+        get => _isDead;
+        set
+        {
+            _isDead = value;
+            if (_isDead) enabled = false;
+        }
+    }
 
 
     private void Start()
@@ -25,20 +45,9 @@ public class Enemie : MonoBehaviour
 
     }
 
-    private void Update()
+    private void FixedUpdate()
     {
-        if(isDead)
-        {
-            return;
-        }
-
-        if (Hp <= 0)
-        {
-            Die();
-            Agent.isStopped = true;
-            return;
-        }
-
+        if (SceneManager.Instance.Player.Hp <= 0) enabled = false;
         var distance = Vector3.Distance(transform.position, SceneManager.Instance.Player.transform.position);
      
         if (distance <= AttackRange)
@@ -53,10 +62,10 @@ public class Enemie : MonoBehaviour
         }
         else
         {
+            Agent.isStopped = false;
             Agent.SetDestination(SceneManager.Instance.Player.transform.position);
         }
         AnimatorController.SetFloat("Speed", Agent.speed); 
-        Debug.Log(Agent.speed);
 
     }
 

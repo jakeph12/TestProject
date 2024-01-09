@@ -1,74 +1,95 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
+using Cysharp.Threading.Tasks;
 
-public class Player : MonoBehaviour
+public partial class Player : MonoBehaviour
 {
-    public float Hp;
+    [SerializeField]private float _Hp;
+    public float Hp
+    {
+        get => _Hp;
+        set
+        {
+            _Hp = value;
+            if(_Hp <= 0) Die();
+        }
+    }
     public float Damage;
     public float AtackSpeed;
     public float AttackRange = 2;
 
     private float lastAttackTime = 0;
-    private bool isDead = false;
+    private bool _isDead = false;
+    private bool isDead
+    {
+        get => _isDead;
+        set
+        {
+            _isDead = value;
+            if (_isDead)
+            {
+                enabled = false;
+                m_btAttack.interactable = false;
+                m_btSuperAttack.interactable = false;
+            }
+            else
+            {
+                enabled = true;
+                m_btAttack.interactable = true;
+            }
+        }
+    }
     public Animator AnimatorController;
 
-    private void Update()
+    public void Start()
     {
-        if (isDead)
-        {
-            return;
-        }
-
-        if (Hp <= 0)
-        {
-            Die();
-            return;
-        }
+        if(m_btAttack) m_btAttack.onClick.AddListener(() => Attack());
+        if (m_btSuperAttack) m_btSuperAttack.onClick.AddListener(() => SuperAttack());
+    }
 
 
+
+    private void FixedUpdate()
+    {
+        Move();
         var enemies = SceneManager.Instance.Enemies;
-        Enemie closestEnemie = null;
+
+
 
         for (int i = 0; i < enemies.Count; i++)
         {
             var enemie = enemies[i];
-            if (enemie == null)
-            {
-                continue;
-            }
 
-            if (closestEnemie == null)
-            {
-                closestEnemie = enemie;
-                continue;
-            }
 
+            if (!enemie) continue;
             var distance = Vector3.Distance(transform.position, enemie.transform.position);
-            var closestDistance = Vector3.Distance(transform.position, closestEnemie.transform.position);
 
-            if (distance < closestDistance)
+            if (!m_scrCloseEnemy && distance <= AttackRange * 2) 
             {
-                closestEnemie = enemie;
+                m_scrCloseEnemy = enemie;
+                return;
+            }
+            if (!m_scrCloseEnemy) return;
+            var closestDistance = Vector3.Distance(transform.position, m_scrCloseEnemy.transform.position);
+
+            if (distance <= closestDistance)
+            {
+                m_scrCloseEnemy = enemie;
             }
 
         }
-
-        if (closestEnemie != null)
+        if (m_scrCloseEnemy)
         {
-            var distance = Vector3.Distance(transform.position, closestEnemie.transform.position);
-            if (distance <= AttackRange)
+            var closestDistance = Vector3.Distance(transform.position, m_scrCloseEnemy.transform.position);
+            if (AttackRange * 2 < closestDistance)
             {
-                if (Time.time - lastAttackTime > AtackSpeed)
-                {
-                    //transform.LookAt(closestEnemie.transform);
-                    transform.transform.rotation = Quaternion.LookRotation(closestEnemie.transform.position - transform.position);
-
-                    lastAttackTime = Time.time;
-                    closestEnemie.Hp -= Damage;
-                    AnimatorController.SetTrigger("Attack");
-                }
+                m_scrCloseEnemy = null;
+                return;
             }
+
+            transform.transform.rotation = Quaternion.LookRotation(m_scrCloseEnemy.transform.position - transform.position);
         }
     }
 
@@ -81,4 +102,81 @@ public class Player : MonoBehaviour
     }
 
 
+}
+public partial class Player
+{
+    [Min(0.001f)]
+    [SerializeField] private float m_flSpees = 1;
+    private Enemie _m_scrCloseEnemy;
+    private Enemie m_scrCloseEnemy
+    {
+        get => _m_scrCloseEnemy;
+        set
+        {
+            _m_scrCloseEnemy = value;
+            if (m_btSuperAttack)
+            {
+                if (_m_scrCloseEnemy && !m_blinCooldownSuper && !isDead) m_btSuperAttack.interactable = true;
+            }
+            else
+            {
+                if (_m_scrCloseEnemy && !isDead) m_btSuperAttack.interactable = false;
+            }
+        }
+    }
+    private bool m_blinCooldownSuper  = false;
+    [SerializeField] private Button m_btAttack,m_btSuperAttack;
+    public void Move()
+    {
+        var vk = new Vector3((int)Input.GetAxisRaw("Horizontal"), 0, (int)Input.GetAxisRaw("Vertical")) * m_flSpees;
+        transform.position += vk;
+        AnimatorController.SetFloat("Speed",vk.magnitude);
+    }
+    public async void Attack()
+    {
+        m_btAttack.interactable = false;
+      
+        AnimatorController.SetTrigger("Attack");
+        if (m_scrCloseEnemy != null)
+        {
+            var distance = Vector3.Distance(transform.position, m_scrCloseEnemy.transform.position);
+            if (distance <= AttackRange)
+            {
+                if (m_scrCloseEnemy.Hp > 0)
+                {
+                    m_scrCloseEnemy.Hp -= Damage;
+                    if (m_scrCloseEnemy.Hp <= 0) m_scrCloseEnemy = null;
+                }
+
+            }
+        }
+        await UniTask.Delay((int)(AtackSpeed * 1000));
+
+        if(!isDead) m_btAttack.interactable = true;
+    }
+    public async void SuperAttack()
+    {
+        m_btSuperAttack.interactable = false;
+        m_blinCooldownSuper = true;
+
+        AnimatorController.SetTrigger("SuperAttack");
+        if (m_scrCloseEnemy != null)
+        {
+            var distance = Vector3.Distance(transform.position, m_scrCloseEnemy.transform.position);
+            if (distance <= AttackRange)
+            {
+                if (m_scrCloseEnemy.Hp > 0)
+                {
+                    m_scrCloseEnemy.Hp -= Damage * 2;
+                    if (m_scrCloseEnemy.Hp <= 0) m_scrCloseEnemy = null;
+                }
+
+            }
+        }
+
+        await UniTask.Delay(2000);
+
+        m_blinCooldownSuper = false;
+        if (!isDead) m_btSuperAttack.interactable = true;
+    }
 }

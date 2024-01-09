@@ -27,7 +27,7 @@ public class Enemie : MonoBehaviour
 
     private float lastAttackTime = 0;
     private bool _isDead = false;
-    private bool isDead
+    protected bool isDead
     {
         get => _isDead;
         set
@@ -42,7 +42,7 @@ public class Enemie : MonoBehaviour
     {
         SceneManager.Instance.AddEnemie(this);
         Agent.SetDestination(SceneManager.Instance.Player.transform.position);
-
+        isDead = false;
     }
 
     private void FixedUpdate()
@@ -71,11 +71,11 @@ public class Enemie : MonoBehaviour
 
 
 
-    private void Die()
+    protected virtual void Die()
     {
-        SceneManager.Instance.RemoveEnemie(this);
         isDead = true;
         AnimatorController.SetTrigger("Die");
+        SceneManager.Instance.RemoveEnemie(this);
     }
 
 }

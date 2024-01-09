@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 
 public class SceneManager : MonoBehaviour
@@ -11,6 +12,9 @@ public class SceneManager : MonoBehaviour
     public List<Enemie> Enemies;
     public GameObject Lose;
     public GameObject Win;
+
+
+    [SerializeField] private Text m_txMainWave;
 
     private int currWave = 0;
     [SerializeField] private LevelConfig Config;
@@ -33,7 +37,8 @@ public class SceneManager : MonoBehaviour
     public void RemoveEnemie(Enemie enemie)
     {
         Enemies.Remove(enemie);
-        if(Enemies.Count == 0)
+        Player.Hp += 2;
+        if (Enemies.Count == 0)
         {
             SpawnWave();
         }
@@ -46,6 +51,7 @@ public class SceneManager : MonoBehaviour
 
     private void SpawnWave()
     {
+        if (m_txMainWave) m_txMainWave.text = $"{Config.Waves.Length}/{currWave}";
         if (currWave >= Config.Waves.Length)
         {
             Win.SetActive(true);

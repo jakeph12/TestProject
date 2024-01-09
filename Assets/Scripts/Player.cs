@@ -7,13 +7,16 @@ using Cysharp.Threading.Tasks;
 public partial class Player : MonoBehaviour
 {
     [SerializeField]private float _Hp;
+    [SerializeField] private Text m_txHp;
     public float Hp
     {
         get => _Hp;
         set
         {
             _Hp = value;
-            if(_Hp <= 0) Die();
+            if (_Hp > 100) _Hp = 100;
+            if (m_txHp) m_txHp.text = $"Hp:{_Hp}";
+            if (_Hp <= 0) Die();
         }
     }
     public float Damage;
@@ -47,6 +50,7 @@ public partial class Player : MonoBehaviour
     {
         if(m_btAttack) m_btAttack.onClick.AddListener(() => Attack());
         if (m_btSuperAttack) m_btSuperAttack.onClick.AddListener(() => SuperAttack());
+        if(m_txHp) m_txHp.text = $"Hp:{Hp}";
     }
 
 
@@ -116,7 +120,12 @@ public partial class Player
             _m_scrCloseEnemy = value;
             if (m_btSuperAttack)
             {
-                if (_m_scrCloseEnemy && !m_blinCooldownSuper && !isDead) m_btSuperAttack.interactable = true;
+                if (_m_scrCloseEnemy)
+                {
+                    if (!m_blinCooldownSuper && !isDead)
+                        m_btSuperAttack.interactable = true;
+                }
+                else m_btSuperAttack.interactable = false;
             }
             else
             {
